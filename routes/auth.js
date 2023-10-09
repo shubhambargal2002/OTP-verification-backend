@@ -4,6 +4,8 @@ const router = express.Router();
 const User = require("../models/userSchema");
 const UserOtp = require("../models/userOtpSchema");
 const nodemailer = require("nodemailer");
+const JWT_SECRET =process.env.JWT_SECRET;
+const jwt=require('jsonwebtoken');
 
 // email config
 const transporter = nodemailer.createTransport({
@@ -45,8 +47,8 @@ router.post("/register", async (req, res) => {
         }
 
         transporter.sendMail(mailOptions, async (error, info) => {
-            if (error) {
-                res.status(400).json({ error: "OTP not sent" });
+            if (error || info) {
+                res.status(400).json({ error: "OTP not Sent. Check your email once more...!" });
             } else {
                 res.status(200).json({ message: "OTP Sent Successfully" });
 
@@ -99,7 +101,8 @@ router.post("/registerOtpVerify", async (req, res) => {
         const userRegisterData = new User(userData);
         await userRegisterData.save();
 
-        res.status(200).json({ message: "User registered Successfully" });
+        const authtoken = jwt.sign(userRegisterData.id, JWT_SECRET);
+        res.status(200).json({ message: "User registered Successfully", authtoken: authtoken });
 
         // Remove the user data from temporary storage
         delete registrationData[email];
@@ -135,7 +138,7 @@ router.post("/loginWithOtp", async (req, res) => {
       }
 
       transporter.sendMail(mailOptions, async (error, info) => {
-        if (error) {
+        if (error || info) {
             res.status(400).json({ error: "OTP not sent" });
         } else {
             res.status(200).json({ message: "OTP Sent Successfully" });
@@ -172,7 +175,9 @@ router.post("/loginOtpVerify", async (req, res) => {
     let userData = loginData[email];
     if(userData && userData.otp == otp){
 
-        res.status(200).json({ message: "User login Successfully" });
+      let userExists = await User.findOne({ email: email });
+      const authtoken = jwt.sign(userExists.id, JWT_SECRET);
+        res.status(200).json({ message: "User login Successfully", authtoken: authtoken });
 
         // Remove the user data from temporary storage
         delete loginData[email];
@@ -180,6 +185,7 @@ router.post("/loginOtpVerify", async (req, res) => {
         res.status(400).json({ error: "Invalid OTP" });
     }
   } catch (error) {
+    console.log(error)
     res.status(400).json({ error: "Internal Server Error" });
   }
 });
@@ -199,7 +205,8 @@ router.post("/loginWithPassword", async (req, res) =>{
             const isMatch=await bcrypt.compare(password,userExists.password)
 
             if(isMatch){
-              res.status(200).json({ message: "User login Successfully" });
+              const authtoken = jwt.sign(userExists.id, JWT_SECRET);
+              res.status(200).json({ message: "User login Successfully", authtoken: authtoken });
             }else{
               return res.status(400).json({error:"Invalid credentials"})
             }
