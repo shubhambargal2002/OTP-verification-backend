@@ -47,7 +47,7 @@ router.post("/register", async (req, res) => {
         }
 
         transporter.sendMail(mailOptions, async (error, info) => {
-            if (error || info) {
+            if (error) {
                 res.status(400).json({ error: "OTP not Sent. Check your email once more...!" });
             } else {
                 res.status(200).json({ message: "OTP Sent Successfully" });
@@ -138,7 +138,7 @@ router.post("/loginWithOtp", async (req, res) => {
       }
 
       transporter.sendMail(mailOptions, async (error, info) => {
-        if (error || info) {
+        if (error) {
             res.status(400).json({ error: "OTP not sent" });
         } else {
             res.status(200).json({ message: "OTP Sent Successfully" });
