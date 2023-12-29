@@ -16,5 +16,5 @@ app.use(require('./routes/auth'));
 const port=process.env.PORT || 5000;
 
 app.listen(port,()=>{
-    console.log(`Otp-Verification server is listening at https://localhost:${port}`)
+    console.log(`Otp-Verification server is listening at http://localhost:${port}`)
 })
