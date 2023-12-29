@@ -43,11 +43,7 @@ router.post("/register", async (req, res) => {
           if (err) {
             res.status(400).json({ error: "Internal Server Error" });
           } else {
-            if (!result) {
-              res
-                .status(400)
-                .json({ error: "Enter Doesn't Exist. Check email once!" });
-            } else {
+            if (result) {
               // Generate OTP
               const OTP = Math.floor(100000 + Math.random() * 900000);
 
@@ -93,6 +89,10 @@ router.post("/register", async (req, res) => {
                   res.status(200).json({ message: "OTP Sent Successfully" });
                 }
               });
+            } else {
+              res
+                .status(400)
+                .json({ error: "Enter Doesn't Exist. Check email once!" });
             }
           }
         });
