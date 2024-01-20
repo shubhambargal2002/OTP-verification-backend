@@ -92,7 +92,7 @@ router.post("/register", async (req, res) => {
             } else {
               res
                 .status(400)
-                .json({ error: "Enter Doesn't Exist. Check email once!" });
+                .json({ error: "Invalid Email...!" });
             }
           }
         });
