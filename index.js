@@ -12,6 +12,7 @@ require('./db')
 
 // routes
 app.use(require('./routes/auth'));
+app.use(require('./routes/note'));
 
 const port=process.env.PORT || 5000;
 
