@@ -6,7 +6,8 @@ const UserOtp = require("../models/userOtpSchema");
 const nodemailer = require("nodemailer");
 const JWT_SECRET = process.env.JWT_SECRET;
 const jwt = require("jsonwebtoken");
-const emailExistence = require("email-existence");
+const EmailVerifier = require('email-verifier');
+const Email_Verify_API_KEY = process.env.Email_Verify_API_KEY;
 
 // email config
 const transporter = nodemailer.createTransport({
@@ -39,63 +40,63 @@ router.post("/register", async (req, res) => {
         .json({ error: "User with this email is already exist" });
     } else {
       try {
-        emailExistence.check(email, (err, result) => {
-          if (err) {
-            res.status(400).json({ error: "Internal Server Error" });
-          } else {
-            if (result) {
-              // Generate OTP
-              const OTP = Math.floor(100000 + Math.random() * 900000);
+        const verifier = new EmailVerifier(Email_Verify_API_KEY);
 
-              // Send OTP to user's email
-              const mailOptions = {
-                from: process.env.EMAIL,
-                to: email,
-                subject: "OTP for Registration",
-                text: `Hi, 👋\n\nWe have noticed that a new action was taken on your Evernote account. ✅ To ensure that this action was initiated by you, we require you to verify your account by entering the following code on your Evernote platform. 🔒 Please note that this code will expire after 10 minutes. ⏰\n\nVerification Code: ${OTP} 📝\n\nIf you did not initiate this action, please ignore this email. ❌\n\nThank you for choosing Evernote. 🚀\n\nBest regards,\nEvernote Team 👩‍💻👨‍💻`,
-              };
-
-              transporter.sendMail(mailOptions, async (error, info) => {
-                if (error) {
-                  res.status(400).json({ error: "Internal Server Error" });
-                } else {
-                  let userOtpExists = await UserOtp.findOne({ email: email });
-
-                  if (userOtpExists) {
-                    // update existing user OTP to userotp collection
-                    userOtpExists.otp = OTP;
-                    await userOtpExists.save();
-                  } else {
-                    // Save new user OTP to userotp collection
-                    const saveOtpData = new UserOtp({
-                      email,
-                      otp: OTP,
-                    });
-
-                    await saveOtpData.save();
-                  }
-
-                  // generate new password
-                  const salt = await bcrypt.genSalt(10);
-                  const secPass = await bcrypt.hash(req.body.password, salt);
-
-                  // Save user registration data in temporary storage
-                  registrationData[email] = {
-                    name: name,
-                    email: email,
-                    password: secPass,
-                    otp: OTP,
-                  };
-                  res.status(200).json({ message: "OTP Sent Successfully" });
-                }
-              });
-            } else {
-              res
-                .status(400)
-                .json({ error: "Invalid Email...!" });
-            }
+        verifier.verify(email, (err,data)=>{
+          if(err){
+            return res.status(400).json({ error: "Internal Server Error" });
           }
-        });
+          else if (data.smtpCheck == "false") {
+            return res.status(400).json({ error: "Email doesn't exist" });
+          }
+          else{
+            // Generate OTP
+            const OTP = Math.floor(100000 + Math.random() * 900000);
+
+            // Send OTP to user's email
+            const mailOptions = {
+              from: process.env.EMAIL,
+              to: email,
+              subject: "OTP for Registration",
+              text: `Hi, 👋\n\nWe have noticed that a new action was taken on your Evernote account. ✅ To ensure that this action was initiated by you, we require you to verify your account by entering the following code on your Evernote platform. 🔒 Please note that this code will expire after 10 minutes. ⏰\n\nVerification Code: ${OTP} 📝\n\nIf you did not initiate this action, please ignore this email. ❌\n\nThank you for choosing Evernote. 🚀\n\nBest regards,\nEvernote Team 👩‍💻👨‍💻`,
+            };
+
+            transporter.sendMail(mailOptions, async (error, info) => {
+              if (error) {
+                res.status(400).json({ error: "Internal Server Error" });
+              } else {
+                let userOtpExists = await UserOtp.findOne({ email: email });
+
+                if (userOtpExists) {
+                  // update existing user OTP to userotp collection
+                  userOtpExists.otp = OTP;
+                  await userOtpExists.save();
+                } else {
+                  // Save new user OTP to userotp collection
+                  const saveOtpData = new UserOtp({
+                    email,
+                    otp: OTP,
+                  });
+
+                  await saveOtpData.save();
+                }
+
+                // generate new password
+                const salt = await bcrypt.genSalt(10);
+                const secPass = await bcrypt.hash(req.body.password, salt);
+
+                // Save user registration data in temporary storage
+                registrationData[email] = {
+                  name: name,
+                  email: email,
+                  password: secPass,
+                  otp: OTP,
+                };
+                res.status(200).json({ message: "OTP Sent Successfully" });
+              }
+            });
+          }
+        })
       } catch (error) {
         res.status(400).json({ error: "Internal Server Error" });
       }
